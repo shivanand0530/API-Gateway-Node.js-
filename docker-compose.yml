@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  gateway:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=your-production-jwt-secret-here
+      - LOG_LEVEL=info
+    depends_on:
+      - redis
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Example upstream services
+  user-service:
+    image: httpd:2.4-alpine
+    ports:
+      - "3001:80"
+    volumes:
+      - ./examples/user-service:/usr/local/apache2/htdocs/
+
+  auth-service:
+    image: httpd:2.4-alpine
+    ports:
+      - "3002:80"
+    volumes:
+      - ./examples/auth-service:/usr/local/apache2/htdocs/
+
+volumes:
+  redis_data:
